@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "user-avatar-1",
+      "description": "User avatar for the user navigation dropdown",
+      "imageUrl": "https://images.unsplash.com/photo-1521146764736-56c929d59c83?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxwZXJzb24lMjBmYWNlfGVufDB8fHx8MTc2NDI5ODQ0Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person face"
+    },
+    {
+      "id": "amenity-bbq",
+      "description": "Image of a BBQ area",
+      "imageUrl": "https://images.unsplash.com/photo-1505405241694-58823de133e1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxiYnElMjBncmlsbHxlbnwwfHx8fDE3NjQyNzQwNDR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "bbq grill"
+    },
+    {
+      "id": "amenity-party-room",
+      "description": "Image of a party room",
+      "imageUrl": "https://images.unsplash.com/photo-1681747941460-7359850ff73a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxwYXJ0eSUyMHJvb218ZW58MHx8fHwxNzY0Mjk5NTMxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "party room"
+    },
+    {
+      "id": "amenity-pool",
+      "description": "Image of a swimming pool",
+      "imageUrl": "https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzd2ltbWluZyUyMHBvb2x8ZW58MHx8fHwxNzY0MjYzNzYxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "swimming pool"
+    }
+  ]
 }

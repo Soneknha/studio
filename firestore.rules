@@ -42,15 +42,15 @@ service cloud.firestore {
     // Collection Rules
     // ------------------------------------------------------------------------
 
-    // Users collection:
-    // - Admins can read/write all users.
+    // Users (moradores) collection:
+    // - Admins can read/list/write all users.
     // - Any signed-in user can read their own document.
-    match /moradores/{moradorId} {
-      allow get: if isSignedIn() && (moradorId == userId() || isAdmin());
-      allow update: if isSignedIn() && moradorId == userId();
+    match /users/{userId} {
+      allow get: if isSignedIn() && (userId == resource.data.userId || isAdmin());
+      allow update: if isSignedIn() && userId == resource.data.userId;
       allow list, create, delete: if isAdmin();
     }
-
+    
     // Admin roles can only be managed by other admins.
     match /roles_admin/{uid} {
       allow read, write: if isAdmin();
@@ -64,7 +64,7 @@ service cloud.firestore {
 
     // Announcements - read for all members, write only for 'sindico' or admin.
     match /avisos/{avisoId} {
-      allow read: if isMember(request.query.condominioId) || isAdmin();
+      allow read: if isMember(resource.data.condominioId) || isAdmin();
       allow create, update, delete: if hasRole(request.resource.data.condominioId, "sindico") || isAdmin();
     }
 
@@ -99,10 +99,9 @@ service cloud.firestore {
 
     // Gate Records - only 'porteiro', 'sindico' or admin can manage.
     match /portaria_registros/{registroId} {
-      allow read, create: if isSignedIn()
+      allow read, create, update, delete: if isSignedIn()
         && (hasRole(request.resource.data.condominioId, "porteiro")
             || hasRole(request.resource.data.condominioId, "sindico") || isAdmin());
-      allow update, delete: if false; // Records should be immutable.
     }
     
     // General condo data (condos, blocks, units) is readable by members and writable by 'sindico' or admin.

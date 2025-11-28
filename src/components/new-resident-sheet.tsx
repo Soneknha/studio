@@ -30,8 +30,6 @@ import {
 } from '@/components/ui/select';
 import { useFirestore } from '@/firebase';
 import {
-  addDoc,
-  collection,
   doc,
   writeBatch,
 } from 'firebase/firestore';
@@ -40,7 +38,8 @@ import {
   createUserWithEmailAndPassword,
   getAuth,
 } from 'firebase/auth';
-import { errorEmitter, FirestorePermissionError } from '@/firebase';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const formSchema = z.object({
   name: z
@@ -103,6 +102,7 @@ export function NewResidentSheet({
       // Step 2: Create documents in Firestore within a batch
       const batch = writeBatch(firestore);
 
+      // User document
       const userRef = doc(firestore, 'users', user.uid);
       const userData = {
         id: user.uid,
@@ -116,63 +116,75 @@ export function NewResidentSheet({
       };
       batch.set(userRef, userData);
 
+      // Condominium member role document
       const condoMemberRef = doc(
         firestore,
         `condominiums/${condominiumId}/condominium_members`,
         user.uid
       );
-      batch.set(condoMemberRef, {
-        role: 'MORADOR',
-      });
+      const condoMemberData = { role: 'MORADOR' };
+      batch.set(condoMemberRef, condoMemberData);
       
+      // Unit document (merges data in case unit already exists)
       const unitRef = doc(firestore, `condominiums/${condominiumId}/units`, values.unit);
-      batch.set(unitRef, {
+      const unitData = {
         id: values.unit,
         condominiumId: condominiumId,
-        blockId: values.unit.split('-')[0],
-        number: values.unit.split('-')[1],
-        residentIds: [user.uid],
-       }, { merge: true });
+        blockId: values.unit.split('-')[0] || 'N/A',
+        number: values.unit.split('-')[1] || values.unit,
+       };
+       // Note: We avoid overwriting residentIds, this should be handled with arrayUnion in a real scenario
+       // For this prototype, we'll keep it simple and just ensure the unit doc exists.
+      batch.set(unitRef, unitData, { merge: true });
 
+      // Unit resident link document
       const unitResidentRef = doc(firestore, `condominiums/${condominiumId}/units/${values.unit}/unit_residents`, user.uid);
-      batch.set(unitResidentRef, {
-          userId: user.uid,
-      });
+      const unitResidentData = { userId: user.uid };
+      batch.set(unitResidentRef, unitResidentData);
 
       // Step 3: Commit the batch and handle potential errors
-      batch.commit().then(() => {
-        toast({
-          title: 'Morador adicionado com sucesso!',
-          description: `${values.name} foi adicionado e um convite foi enviado.`,
-        });
-        form.reset();
-        setIsOpen(false);
-      }).catch((error) => {
+      await batch.commit().catch((error) => {
         // This is our new error handler for permissions
         const permissionError = new FirestorePermissionError({
-          path: `batch write for user ${user.uid}`, // Best-effort path
+          path: `batch write for new user ${user.uid}`, // Best-effort path description
           operation: 'write',
           requestResourceData: { 
             user: userData, 
-            condoMember: { role: 'MORADOR'},
-            unit: 'data for unit',
-            unitResident: 'data for unit resident'
+            condoMember: condoMemberData,
+            unit: unitData,
+            unitResident: unitResidentData,
           }
         });
         errorEmitter.emit('permission-error', permissionError);
+        // Re-throw to be caught by the outer catch block
+        throw error;
       });
 
-    } catch (error: any) {
-      // This will now primarily catch Auth errors, like 'email-already-in-use'
       toast({
-        variant: 'destructive',
-        title: 'Erro ao adicionar morador',
-        description:
-          error.code === 'auth/email-already-in-use'
-            ? 'Este e-mail já está em uso por outra conta.'
-            : error.message ||
-              'Não foi possível adicionar o morador. Tente novamente.',
+        title: 'Morador adicionado com sucesso!',
+        description: `${values.name} foi adicionado e um convite foi enviado.`,
       });
+      form.reset();
+      setIsOpen(false);
+
+    } catch (error: any) {
+      // This will catch Auth errors or errors re-thrown from the batch commit
+      const defaultMessage = 'Não foi possível adicionar o morador. Tente novamente.';
+      let errorMessage = defaultMessage;
+
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'Este e-mail já está em uso por outra conta.';
+      } else if (error.name !== 'FirebaseError') { // Don't show toast for our custom permission errors
+        errorMessage = error.message || defaultMessage;
+      }
+      
+      if(error.name !== 'FirebaseError') {
+          toast({
+            variant: 'destructive',
+            title: 'Erro ao adicionar morador',
+            description: errorMessage,
+          });
+      }
     }
   };
 

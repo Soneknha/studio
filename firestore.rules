@@ -61,10 +61,10 @@ service cloud.firestore {
     
     /**
      * Checks if the signed-in user has global admin privileges.
-     * Admin UIDs are stored in the `/roles_admin` collection.
+     * The admin UID is hardcoded for initial setup.
      */
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn() && request.auth.uid == 'Z2mybdpXJEclRWCSVEFPKVw3x7T2';
     }
     
     /**

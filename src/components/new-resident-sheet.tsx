@@ -40,6 +40,7 @@ import {
   createUserWithEmailAndPassword,
   getAuth,
 } from 'firebase/auth';
+import { errorEmitter, FirestorePermissionError } from '@/firebase';
 
 const formSchema = z.object({
   name: z
@@ -91,7 +92,7 @@ export function NewResidentSheet({
     }
 
     try {
-      // Create user in Auth
+      // Step 1: Create user in Auth
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         values.email,
@@ -99,11 +100,11 @@ export function NewResidentSheet({
       );
       const user = userCredential.user;
 
-      // Create documents in Firestore within a batch
+      // Step 2: Create documents in Firestore within a batch
       const batch = writeBatch(firestore);
 
       const userRef = doc(firestore, 'users', user.uid);
-      batch.set(userRef, {
+      const userData = {
         id: user.uid,
         name: values.name,
         email: values.email,
@@ -112,7 +113,8 @@ export function NewResidentSheet({
         roles: ['MORADOR'],
         unit: values.unit,
         status: values.status,
-      });
+      };
+      batch.set(userRef, userData);
 
       const condoMemberRef = doc(
         firestore,
@@ -123,7 +125,6 @@ export function NewResidentSheet({
         role: 'MORADOR',
       });
       
-      // TODO: This is not ideal, we should have a better way to do this
       const unitRef = doc(firestore, `condominiums/${condominiumId}/units`, values.unit);
       batch.set(unitRef, {
         id: values.unit,
@@ -138,16 +139,31 @@ export function NewResidentSheet({
           userId: user.uid,
       });
 
-      await batch.commit();
-
-      toast({
-        title: 'Morador adicionado com sucesso!',
-        description: `${values.name} foi adicionado e um convite foi enviado.`,
+      // Step 3: Commit the batch and handle potential errors
+      batch.commit().then(() => {
+        toast({
+          title: 'Morador adicionado com sucesso!',
+          description: `${values.name} foi adicionado e um convite foi enviado.`,
+        });
+        form.reset();
+        setIsOpen(false);
+      }).catch((error) => {
+        // This is our new error handler for permissions
+        const permissionError = new FirestorePermissionError({
+          path: `batch write for user ${user.uid}`, // Best-effort path
+          operation: 'write',
+          requestResourceData: { 
+            user: userData, 
+            condoMember: { role: 'MORADOR'},
+            unit: 'data for unit',
+            unitResident: 'data for unit resident'
+          }
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
-      form.reset();
-      setIsOpen(false);
+
     } catch (error: any) {
-      console.error('Error creating resident:', error);
+      // This will now primarily catch Auth errors, like 'email-already-in-use'
       toast({
         variant: 'destructive',
         title: 'Erro ao adicionar morador',

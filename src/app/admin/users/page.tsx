@@ -64,11 +64,11 @@ export default function AdminUsersPage() {
         setUsers(allUsers);
       } catch (error) {
         console.error("Error fetching users:", error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao buscar usuários",
-          description: "Não foi possível carregar a lista de usuários.",
+        const permissionError = new FirestorePermissionError({
+          path: 'users',
+          operation: 'list',
         });
+        errorEmitter.emit('permission-error', permissionError);
       } finally {
         setIsLoading(false);
       }
@@ -78,7 +78,16 @@ export default function AdminUsersPage() {
   }, [firestore, toast]);
 
   const toggleAdmin = (user: AppUser) => {
-    if (!firestore) return;
+    if (!firestore || !adminUser) return;
+    if (user.id === adminUser.uid) {
+        toast({
+            variant: "destructive",
+            title: "Ação não permitida",
+            description: "Você не pode remover a si próprio como administrador.",
+        });
+        return;
+    }
+
     const adminRoleRef = doc(firestore, 'roles_admin', user.id);
     if (user.isAdmin) {
       deleteDocumentNonBlocking(adminRoleRef);
@@ -109,32 +118,46 @@ export default function AdminUsersPage() {
 
     // 1. Create/update user document
     const userRef = doc(firestore, 'users', adminUser.uid);
-    batch.set(userRef, {
+    const userData = {
         id: adminUser.uid,
         name: adminUser.displayName || 'Admin User',
         email: adminUser.email,
-    }, { merge: true });
+    };
+    batch.set(userRef, userData, { merge: true });
     
     // 2. Create the role document
     const roleRef = doc(firestore, 'usuarios_roles', roleId);
-    batch.set(roleRef, {
+    const roleData = {
         userId: adminUser.uid,
         condominiumId: condominiumId,
         role: "sindico",
-    });
+    };
+    batch.set(roleRef, roleData);
+    
+    // 3. Create the condominium document
+    const condoRef = doc(firestore, 'condominios', condominiumId);
+    const condoData = {
+        id: condominiumId,
+        name: "CondoConnect Towers",
+        address: "Rua dos Desenvolvedores, 123 - São Paulo, SP",
+        settings: "Horário de silêncio: 22h às 08h."
+    };
+    batch.set(condoRef, condoData, { merge: true });
+
 
     batch.commit().then(() => {
         toast({
             title: "Sucesso!",
-            description: "Você foi adicionado como síndico do condomínio de teste.",
+            description: "Você foi adicionado como síndico e o condomínio de teste foi criado.",
         });
     }).catch(error => {
         const permissionError = new FirestorePermissionError({
-          path: `batch write for test sindico role`,
+          path: `batch write for test sindico setup`,
           operation: 'write',
           requestResourceData: { 
-            userDoc: { name: adminUser.displayName, email: adminUser.email },
-            roleDoc: { userId: adminUser.uid, role: 'sindico' }
+            userDoc: userData,
+            roleDoc: roleData,
+            condoDoc: condoData
           }
         });
         errorEmitter.emit('permission-error', permissionError);
@@ -189,6 +212,7 @@ export default function AdminUsersPage() {
                       variant={user.isAdmin ? 'destructive' : 'outline'}
                       size="sm"
                       onClick={() => toggleAdmin(user)}
+                      disabled={!adminUser || user.id === adminUser.uid}
                     >
                       {user.isAdmin ? 'Remover Admin' : 'Tornar Admin'}
                     </Button>

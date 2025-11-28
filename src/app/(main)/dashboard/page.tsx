@@ -6,7 +6,6 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import {
-  BarChart,
   Calendar,
   Megaphone,
   ShieldAlert,
@@ -14,29 +13,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartConfig,
-} from "@/components/ui/chart"
-import { Bar, CartesianGrid, XAxis, YAxis, BarChart as RechartsBarChart } from "recharts"
-
-const chartData = [
-  { month: "Jan", reservations: 18 },
-  { month: "Fev", reservations: 21 },
-  { month: "Mar", reservations: 25 },
-  { month: "Abr", reservations: 32 },
-  { month: "Mai", reservations: 28 },
-  { month: "Jun", reservations: 35 },
-]
-
-const chartConfig = {
-  reservations: {
-    label: "Reservas",
-    color: "hsl(var(--primary))",
-  },
-} satisfies ChartConfig
+import { DashboardChart } from "@/components/dashboard-chart"
 
 export default function DashboardPage() {
   return (
@@ -95,27 +72,7 @@ export default function DashboardPage() {
             <CardDescription>Uso das áreas comuns nos últimos 6 meses.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="h-64 w-full">
-              <RechartsBarChart data={chartData} accessibilityLayer>
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="month"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                />
-                <YAxis
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent indicator="dot" />}
-                />
-                <Bar dataKey="reservations" fill="var(--color-reservations)" radius={4} />
-              </RechartsBarChart>
-            </ChartContainer>
+            <DashboardChart />
           </CardContent>
         </Card>
         <Card>

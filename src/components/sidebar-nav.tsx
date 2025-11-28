@@ -59,16 +59,15 @@ export function SidebarNav() {
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} passHref legacyBehavior>
                 <SidebarMenuButton
+                  as={Link}
+                  href={item.href}
                   isActive={checkActive(item.href)}
                   tooltip={item.label}
-                  asChild
                 >
                   <item.icon />
                   <span>{item.label}</span>
                 </SidebarMenuButton>
-              </Link>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
@@ -77,16 +76,15 @@ export function SidebarNav() {
         <Separator className="my-1 bg-sidebar-border" />
          <SidebarMenu>
             <SidebarMenuItem>
-              <Link href={settingsItem.href} passHref legacyBehavior>
                 <SidebarMenuButton
+                  as={Link}
+                  href={settingsItem.href}
                   isActive={pathname.startsWith(settingsItem.href)}
                   tooltip={settingsItem.label}
-                  asChild
                 >
                   <settingsItem.icon />
                   <span>{settingsItem.label}</span>
                 </SidebarMenuButton>
-              </Link>
             </SidebarMenuItem>
          </SidebarMenu>
       </SidebarFooter>

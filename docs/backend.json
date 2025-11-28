@@ -36,6 +36,14 @@
           "items": {
             "type": "string"
           }
+        },
+        "unit": {
+          "type": "string",
+          "description": "The unit the resident lives in (e.g., A-101)."
+        },
+        "status": {
+            "type": "string",
+            "description": "The financial status of the resident (e.g., Adimplente, Inadimplente)."
         }
       },
       "required": [

@@ -14,6 +14,9 @@ import {
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
 
 const ADMIN_EMAIL = 'treecommunity@treetechautomation.com';
 const ADMIN_UID = 'Z2mybdpXJEclRWCSVEFPKVw3x7T2';
@@ -40,14 +43,35 @@ export default function SeedAdminPage() {
     try {
       const userRef = doc(firestore, 'users', ADMIN_UID);
       const adminRoleRef = doc(firestore, 'roles_admin', ADMIN_UID);
+      
+      const userData = {
+        id: ADMIN_UID,
+        name: ADMIN_NAME,
+        email: ADMIN_EMAIL,
+      };
+      
+      const adminRoleData = { uid: ADMIN_UID };
 
       // 1. Check and create user document
-      const userDoc = await getDoc(userRef);
+      const userDoc = await getDoc(userRef).catch(error => {
+          // This read might fail, let's create a contextual error for it
+          const permissionError = new FirestorePermissionError({
+            path: userRef.path,
+            operation: 'get',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          throw error; // Re-throw to stop execution
+      });
+
       if (!userDoc.exists()) {
-        await setDoc(userRef, {
-          id: ADMIN_UID,
-          name: ADMIN_NAME,
-          email: ADMIN_EMAIL,
+        await setDoc(userRef, userData).catch(error => {
+          const permissionError = new FirestorePermissionError({
+            path: userRef.path,
+            operation: 'create',
+            requestResourceData: userData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          throw error; // Re-throw
         });
         setResult(prev => prev + `Documento de usuário para ${ADMIN_NAME} criado com sucesso.\n`);
       } else {
@@ -55,9 +79,25 @@ export default function SeedAdminPage() {
       }
 
       // 2. Check and create admin role document
-      const adminDoc = await getDoc(adminRoleRef);
+      const adminDoc = await getDoc(adminRoleRef).catch(error => {
+          const permissionError = new FirestorePermissionError({
+            path: adminRoleRef.path,
+            operation: 'get',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          throw error;
+      });
+
       if (!adminDoc.exists()) {
-        await setDoc(adminRoleRef, { uid: ADMIN_UID });
+        await setDoc(adminRoleRef, adminRoleData).catch(error => {
+          const permissionError = new FirestorePermissionError({
+            path: adminRoleRef.path,
+            operation: 'create',
+            requestResourceData: adminRoleData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          throw error;
+        });
         setResult(prev => prev + 'Permissão de administrador concedida com sucesso.\n');
       } else {
         setResult(prev => prev + 'Usuário já possui permissão de administrador.\n');
@@ -68,13 +108,17 @@ export default function SeedAdminPage() {
         description: 'O usuário administrador foi configurado.',
       });
     } catch (error: any) {
-      console.error('Error seeding admin user:', error);
-      setResult(`Ocorreu um erro: ${error.message}`);
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao configurar administrador',
-        description: error.message,
-      });
+       // This catch block now primarily handles flow control and avoids duplicate toasts.
+       // The actual error is emitted to the global listener.
+       if (error.name !== 'FirebaseError') {
+         // Handle non-permission errors if necessary
+         setResult(`Ocorreu um erro inesperado: ${error.message}`);
+         toast({
+           variant: 'destructive',
+           title: 'Erro ao configurar administrador',
+           description: error.message,
+         });
+       }
     } finally {
       setIsLoading(false);
     }

@@ -13,16 +13,20 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isUserLoading) {
-      if (!user) {
-        router.push('/login');
-      } else if (isAdmin) {
-        router.push('/admin/dashboard');
-      }
+    if (isUserLoading) return; // Wait until user status is resolved
+
+    if (!user) {
+      router.push('/login');
+    } else if (isAdmin) {
+      // Redirect admin to their specific dashboard
+      router.push('/admin/dashboard');
     }
+    // If it's a regular user, they stay in this layout.
+    
   }, [user, isAdmin, isUserLoading, router]);
 
-  if (isUserLoading || !user || isAdmin) {
+  // Show loading skeleton while checking auth or if the user is an admin being redirected
+  if (isUserLoading || isAdmin) {
     return (
         <div className="flex h-screen w-screen items-center justify-center">
             <div className="flex flex-col items-center gap-4">
@@ -35,18 +39,24 @@ export default function MainLayout({ children }: { children: ReactNode }) {
         </div>
     );
   }
+  
+  // Render main layout for regular users
+  if(user && !isAdmin){
+    return (
+      <>
+        <Sidebar collapsible="icon">
+          <SidebarNav />
+        </Sidebar>
+        <SidebarInset>
+          <MainHeader />
+          <main className="p-4 sm:p-6 lg:p-8 bg-muted/20 min-h-[calc(100vh-4rem)]">
+            {children}
+          </main>
+        </SidebarInset>
+      </>
+    );
+  }
 
-  return (
-    <>
-      <Sidebar collapsible="icon">
-        <SidebarNav />
-      </Sidebar>
-      <SidebarInset>
-        <MainHeader />
-        <main className="p-4 sm:p-6 lg:p-8 bg-muted/20 min-h-[calc(100vh-4rem)]">
-          {children}
-        </main>
-      </SidebarInset>
-    </>
-  );
+  // Fallback for any other case (shouldn't be reached in normal flow)
+  return null; 
 }

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useAuth, useFirestore, useFirebase } from '@/firebase/provider';
+import { useFirebase } from '@/firebase/provider';
 import { User } from 'firebase/auth';
 import { doc, onSnapshot, DocumentSnapshot } from 'firebase/firestore';
 
@@ -12,16 +12,27 @@ export interface UserHookResult {
 }
 
 export const useUser = (): UserHookResult => {
-  const { user, isUserLoading: isAuthLoading, userError } = useFirebase();
-  const firestore = useFirestore();
+  const { user, isUserLoading: isAuthLoading, userError, firestore } = useFirebase();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isRoleLoading, setIsRoleLoading] = useState(true);
 
   useEffect(() => {
+    if (isAuthLoading) {
+        setIsRoleLoading(true);
+        return;
+    }
+    
     if (!user) {
       setIsAdmin(false);
       setIsRoleLoading(false);
       return;
+    }
+    
+    if(!firestore) {
+        console.error("Firestore instance is not available in useUser hook");
+        setIsAdmin(false);
+        setIsRoleLoading(false);
+        return;
     }
 
     const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
@@ -39,7 +50,7 @@ export const useUser = (): UserHookResult => {
     );
 
     return () => unsubscribe();
-  }, [user, firestore]);
+  }, [user, firestore, isAuthLoading]);
 
   return {
     user,

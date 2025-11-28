@@ -26,20 +26,13 @@ interface Condominium {
   address: string;
 }
 
-// Mock data until we have a form to create condominiums
-const mockCondominiums: Condominium[] = [
-    {
-        id: 'condo-connect-123',
-        name: 'CondoConnect Towers',
-        address: 'Rua dos Desenvolvedores, 123 - São Paulo, SP'
-    }
-];
-
-
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
 
-  // We keep the real queries for users and admins
+  const condosQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'condominios') : null),
+    [firestore]
+  );
   const usersQuery = useMemoFirebase(
     () => (firestore ? collection(firestore, 'users') : null),
     [firestore]
@@ -49,10 +42,7 @@ export default function AdminDashboardPage() {
     [firestore]
   );
 
-  // For now, let's use the mock data for condominiums
-  const condominiums = mockCondominiums;
-  const isLoadingCondos = false; // We are not loading from the DB for now
-
+  const { data: condominiums, isLoading: isLoadingCondos } = useCollection<Condominium>(condosQuery);
   const { data: users, isLoading: isLoadingUsers } = useCollection(usersQuery);
   const { data: admins, isLoading: isLoadingAdmins } = useCollection(adminsQuery);
 

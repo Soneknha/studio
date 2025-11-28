@@ -1,0 +1,1036 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user within the CondoConnect application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user.",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "The phone number of the user."
+        },
+        "roles": {
+          "type": "array",
+          "description": "A list of roles assigned to the user (e.g., MORADOR, SINDICO, PORTEIRO).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "condominiumIds": {
+          "type": "array",
+          "description": "References to Condominiums the user is associated with. (Relationship: User N:N Condominium)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email",
+        "roles"
+      ]
+    },
+    "Condominium": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Condominium",
+      "type": "object",
+      "description": "Represents a condominium complex.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the condominium entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the condominium."
+        },
+        "cnpj": {
+          "type": "string",
+          "description": "The CNPJ (optional) of the condominium."
+        },
+        "address": {
+          "type": "string",
+          "description": "The address of the condominium."
+        },
+        "settings": {
+          "type": "string",
+          "description": "Settings for the condominium (e.g., quiet hours, reservation rules)."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "address"
+      ]
+    },
+    "Block": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Block",
+      "type": "object",
+      "description": "Represents a block or tower within a condominium.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the block entity."
+        },
+        "condominiumId": {
+          "type": "string",
+          "description": "Reference to Condominium. (Relationship: Condominium 1:N Block)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name or identifier of the block (e.g., Block A, Tower 1)."
+        }
+      },
+      "required": [
+        "id",
+        "condominiumId",
+        "name"
+      ]
+    },
+    "Unit": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Unit",
+      "type": "object",
+      "description": "Represents a unit (apartment) within a block.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the unit entity."
+        },
+        "condominiumId": {
+          "type": "string",
+          "description": "Reference to Condominium. (Relationship: Condominium 1:N Unit)"
+        },
+        "blockId": {
+          "type": "string",
+          "description": "Reference to Block. (Relationship: Block 1:N Unit)"
+        },
+        "number": {
+          "type": "string",
+          "description": "The unit number or apartment number."
+        },
+        "residentIds": {
+          "type": "array",
+          "description": "References to Users who are residents of this unit. (Relationship: User N:N Unit)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "condominiumId",
+        "blockId",
+        "number"
+      ]
+    },
+    "Announcement": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Announcement",
+      "type": "object",
+      "description": "Represents an announcement or communication to residents.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the announcement entity."
+        },
+        "condominiumId": {
+          "type": "string",
+          "description": "Reference to Condominium. (Relationship: Condominium 1:N Announcement)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the announcement."
+        },
+        "body": {
+          "type": "string",
+          "description": "The body text of the announcement."
+        },
+        "attachments": {
+          "type": "array",
+          "description": "A list of URLs for attached files (e.g., PDFs, images).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "target": {
+          "type": "string",
+          "description": "Specifies the target audience for the announcement (e.g., entire condominium, a specific block, or unit)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "Reference to User who created the announcement. (Relationship: User 1:N Announcement)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time when the announcement was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "condominiumId",
+        "title",
+        "body",
+        "createdBy",
+        "createdAt"
+      ]
+    },
+    "Conversation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Conversation",
+      "type": "object",
+      "description": "Represents a chat conversation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the conversation entity."
+        },
+        "condominiumId": {
+          "type": "string",
+          "description": "Reference to Condominium. (Relationship: Condominium 1:N Conversation)"
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of conversation (e.g., general, block, private)."
+        },
+        "participantIds": {
+          "type": "array",
+          "description": "References to Users participating in the conversation. (Relationship: User N:N Conversation)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "condominiumId",
+        "type"
+      ]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a message within a conversation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the message entity."
+        },
+        "conversationId": {
+          "type": "string",
+          "description": "Reference to Conversation. (Relationship: Conversation 1:N Message)"
+        },
+        "senderId": {
+          "type": "string",
+          "description": "Reference to User who sent the message. (Relationship: User 1:N Message)"
+        },
+        "text": {
+          "type": "string",
+          "description": "The text content of the message."
+        },
+        "attachments": {
+          "type": "array",
+          "description": "A list of URLs for attached files (e.g., images).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time when the message was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "conversationId",
+        "senderId",
+        "text",
+        "createdAt"
+      ]
+    },
+    "Amenity": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Amenity",
+      "type": "object",
+      "description": "Represents a common area or amenity within the condominium.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the amenity entity."
+        },
+        "condominiumId": {
+          "type": "string",
+          "description": "Reference to Condominium. (Relationship: Condominium 1:N Amenity)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the amenity (e.g., Churrasqueira 1, Salão de Festas)."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the amenity."
+        },
+        "rules": {
+          "type": "string",
+          "description": "Rules for using the amenity (e.g., operating hours, reservation limits)."
+        }
+      },
+      "required": [
+        "id",
+        "condominiumId",
+        "name"
+      ]
+    },
+    "Reservation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Reservation",
+      "type": "object",
+      "description": "Represents a reservation for an amenity.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the reservation entity."
+        },
+        "amenityId": {
+          "type": "string",
+          "description": "Reference to Amenity. (Relationship: Amenity 1:N Reservation)"
+        },
+        "condominiumId": {
+          "type": "string",
+          "description": "Reference to Condominium. (Relationship: Condominium 1:N Reservation)"
+        },
+        "unitId": {
+          "type": "string",
+          "description": "Reference to Unit. (Relationship: Unit 1:N Reservation)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User who made the reservation. (Relationship: User 1:N Reservation)"
+        },
+        "startDateTime": {
+          "type": "string",
+          "description": "The date and time when the reservation starts.",
+          "format": "date-time"
+        },
+        "endDateTime": {
+          "type": "string",
+          "description": "The date and time when the reservation ends.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the reservation (e.g., PENDING, APPROVED, REJECTED, CANCELED)."
+        }
+      },
+      "required": [
+        "id",
+        "amenityId",
+        "condominiumId",
+        "unitId",
+        "userId",
+        "startDateTime",
+        "endDateTime",
+        "status"
+      ]
+    },
+    "Incident": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Incident",
+      "type": "object",
+      "description": "Represents an incident or issue reported by a resident.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the incident entity."
+        },
+        "condominiumId": {
+          "type": "string",
+          "description": "Reference to Condominium. (Relationship: Condominium 1:N Incident)"
+        },
+        "unitId": {
+          "type": "string",
+          "description": "Reference to Unit. (Relationship: Unit 1:N Incident)"
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "Reference to User who reported the incident. (Relationship: User 1:N Incident)"
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of incident (e.g., noise, leak, security)."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the incident."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the incident (e.g., OPEN, IN_PROGRESS, RESOLVED)."
+        },
+        "attachments": {
+          "type": "array",
+          "description": "A list of URLs for attached files (e.g., images).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time when the incident was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "The date and time when the incident was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "condominiumId",
+        "unitId",
+        "createdBy",
+        "type",
+        "description",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Document": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Document",
+      "type": "object",
+      "description": "Represents a document shared within the condominium.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the document entity."
+        },
+        "condominiumId": {
+          "type": "string",
+          "description": "Reference to Condominium. (Relationship: Condominium 1:N Document)"
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of document (e.g., meeting minutes, internal regulations)."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the document."
+        },
+        "fileUrl": {
+          "type": "string",
+          "description": "The URL of the document file stored in Firebase Storage.",
+          "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time when the document was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "condominiumId",
+        "type",
+        "title",
+        "fileUrl",
+        "createdAt"
+      ]
+    },
+    "Assembly": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Assembly",
+      "type": "object",
+      "description": "Represents a condominium assembly or meeting.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the assembly entity."
+        },
+        "condominiumId": {
+          "type": "string",
+          "description": "Reference to Condominium. (Relationship: Condominium 1:N Assembly)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the assembly."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the assembly."
+        },
+        "startAt": {
+          "type": "string",
+          "description": "The date and time when the assembly starts.",
+          "format": "date-time"
+        },
+        "endAt": {
+          "type": "string",
+          "description": "The date and time when the assembly ends.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "condominiumId",
+        "title",
+        "description",
+        "startAt",
+        "endAt"
+      ]
+    },
+    "Poll": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Poll",
+      "type": "object",
+      "description": "Represents a poll or voting question within an assembly.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the poll entity."
+        },
+        "assemblyId": {
+          "type": "string",
+          "description": "Reference to Assembly. (Relationship: Assembly 1:N Poll)"
+        },
+        "question": {
+          "type": "string",
+          "description": "The text of the poll question."
+        },
+        "options": {
+          "type": "array",
+          "description": "A list of options for the poll question.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "assemblyId",
+        "question",
+        "options"
+      ]
+    },
+    "Vote": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Vote",
+      "type": "object",
+      "description": "Represents a vote cast in a poll.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the vote entity."
+        },
+        "pollId": {
+          "type": "string",
+          "description": "Reference to Poll. (Relationship: Poll 1:N Vote)"
+        },
+        "unitId": {
+          "type": "string",
+          "description": "Reference to Unit. (Relationship: Unit 1:N Vote)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User who cast the vote. (Relationship: User 1:N Vote)"
+        },
+        "selectedOption": {
+          "type": "string",
+          "description": "The option selected by the voter."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time when the vote was cast.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "pollId",
+        "unitId",
+        "userId",
+        "selectedOption",
+        "createdAt"
+      ]
+    },
+    "Visitor": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Visitor",
+      "type": "object",
+      "description": "Represents a visitor to the condominium.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the visitor entity."
+        },
+        "condominiumId": {
+          "type": "string",
+          "description": "Reference to Condominium. (Relationship: Condominium 1:N Visitor)"
+        },
+        "unitId": {
+          "type": "string",
+          "description": "Reference to Unit being visited. (Relationship: Unit 1:N Visitor)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the visitor."
+        },
+        "document": {
+          "type": "string",
+          "description": "The visitor's identification document (e.g., driver's license, passport)."
+        },
+        "entryAt": {
+          "type": "string",
+          "description": "The date and time when the visitor entered the condominium.",
+          "format": "date-time"
+        },
+        "exitAt": {
+          "type": "string",
+          "description": "The date and time when the visitor exited the condominium.",
+          "format": "date-time"
+        },
+        "registeredBy": {
+          "type": "string",
+          "description": "Reference to User (Porteiro) who registered the visitor. (Relationship: User 1:N Visitor)"
+        }
+      },
+      "required": [
+        "id",
+        "condominiumId",
+        "unitId",
+        "name",
+        "document",
+        "entryAt",
+        "registeredBy"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile information.  Currently minimal user data beyond authentication.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}",
+        "definition": {
+          "entityName": "Condominium",
+          "schema": {
+            "$ref": "#/backend/entities/Condominium"
+          },
+          "description": "Stores condominium information.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/blocks/{blockId}",
+        "definition": {
+          "entityName": "Block",
+          "schema": {
+            "$ref": "#/backend/entities/Block"
+          },
+          "description": "Stores block information within a condominium.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "blockId",
+              "description": "The unique identifier of the block."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/units/{unitId}",
+        "definition": {
+          "entityName": "Unit",
+          "schema": {
+            "$ref": "#/backend/entities/Unit"
+          },
+          "description": "Stores unit information within a condominium.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "unitId",
+              "description": "The unique identifier of the unit."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/units/{unitId}/unit_residents/{userId}",
+        "definition": {
+          "entityName": "UnitResident",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores the resident to unit relationships. Used for direct security rule access.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "unitId",
+              "description": "The unique identifier of the unit."
+            },
+            {
+              "name": "userId",
+              "description": "The unique identifier of the resident."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/announcements/{announcementId}",
+        "definition": {
+          "entityName": "Announcement",
+          "schema": {
+            "$ref": "#/backend/entities/Announcement"
+          },
+          "description": "Stores announcements for a condominium.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "announcementId",
+              "description": "The unique identifier of the announcement."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/announcements/{announcementId}/unit_resident_ids/{userId}",
+        "definition": {
+          "entityName": "AnnouncementTarget",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "If the announcement has a target of a specific user, this subcollection stores the list of those residentIds.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "announcementId",
+              "description": "The unique identifier of the announcement."
+            },
+            {
+              "name": "userId",
+              "description": "The unique identifier of the targetted user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/conversations/{conversationId}",
+        "definition": {
+          "entityName": "Conversation",
+          "schema": {
+            "$ref": "#/backend/entities/Conversation"
+          },
+          "description": "Stores chat conversations within a condominium.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "conversationId",
+              "description": "The unique identifier of the conversation."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/conversations/{conversationId}/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": {
+            "$ref": "#/backend/entities/Message"
+          },
+          "description": "Stores messages within a conversation.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "conversationId",
+              "description": "The unique identifier of the conversation."
+            },
+            {
+              "name": "messageId",
+              "description": "The unique identifier of the message."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/amenities/{amenityId}",
+        "definition": {
+          "entityName": "Amenity",
+          "schema": {
+            "$ref": "#/backend/entities/Amenity"
+          },
+          "description": "Stores information about amenities within a condominium.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "amenityId",
+              "description": "The unique identifier of the amenity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/reservations/{reservationId}",
+        "definition": {
+          "entityName": "Reservation",
+          "schema": {
+            "$ref": "#/backend/entities/Reservation"
+          },
+          "description": "Stores reservations for amenities.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "reservationId",
+              "description": "The unique identifier of the reservation."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/units/{unitId}/incidents/{incidentId}",
+        "definition": {
+          "entityName": "Incident",
+          "schema": {
+            "$ref": "#/backend/entities/Incident"
+          },
+          "description": "Stores incidents reported by residents.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "unitId",
+              "description": "The unique identifier of the unit."
+            },
+            {
+              "name": "incidentId",
+              "description": "The unique identifier of the incident."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/documents/{documentId}",
+        "definition": {
+          "entityName": "Document",
+          "schema": {
+            "$ref": "#/backend/entities/Document"
+          },
+          "description": "Stores documents shared within a condominium.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "documentId",
+              "description": "The unique identifier of the document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/assemblies/{assemblyId}",
+        "definition": {
+          "entityName": "Assembly",
+          "schema": {
+            "$ref": "#/backend/entities/Assembly"
+          },
+          "description": "Stores information about condominium assemblies.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "assemblyId",
+              "description": "The unique identifier of the assembly."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/assemblies/{assemblyId}/polls/{pollId}",
+        "definition": {
+          "entityName": "Poll",
+          "schema": {
+            "$ref": "#/backend/entities/Poll"
+          },
+          "description": "Stores polls within an assembly.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "assemblyId",
+              "description": "The unique identifier of the assembly."
+            },
+            {
+              "name": "pollId",
+              "description": "The unique identifier of the poll."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/assemblies/{assemblyId}/polls/{pollId}/votes/{voteId}",
+        "definition": {
+          "entityName": "Vote",
+          "schema": {
+            "$ref": "#/backend/entities/Vote"
+          },
+          "description": "Stores votes cast in a poll.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "assemblyId",
+              "description": "The unique identifier of the assembly."
+            },
+            {
+              "name": "pollId",
+              "description": "The unique identifier of the poll."
+            },
+            {
+              "name": "voteId",
+              "description": "The unique identifier of the vote."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/visitors/{visitorId}",
+        "definition": {
+          "entityName": "Visitor",
+          "schema": {
+            "$ref": "#/backend/entities/Visitor"
+          },
+          "description": "Stores visitor information.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "visitorId",
+              "description": "The unique identifier of the visitor."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{userId}",
+        "definition": {
+          "entityName": "AdminRole",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Collection to store admin user ids. Used to verify if a user has admin rights.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the admin user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/condominiums/{condominiumId}/condominium_members/{userId}",
+        "definition": {
+          "entityName": "CondominiumMember",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores condominium member user ids. Used to verify if a user has access to a condominium.",
+          "params": [
+            {
+              "name": "condominiumId",
+              "description": "The unique identifier of the condominium."
+            },
+            {
+              "name": "userId",
+              "description": "The unique identifier of the condominium member."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "This Firestore structure is designed to support a multi-tenant condominium management application ('CondoConnect') with robust security and scalability, adhering to the core design principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), QAPs (Rules are not Filters) and Invariants.\n\n**Authorization Independence:**\n\n*   The structure eliminates hierarchical authorization dependencies (no `get()` calls in security rules) by denormalizing authorization context into subcollections.  For example, the `unit_residents` subcollection is used to store the UIDs of residents associated with a Unit. This enables direct access control based on `request.auth.uid` without needing to read parent documents.\n*   The `condominium_members` subcollection stores a map of user IDs to roles within a condominium. This denormalization allows us to determine a user's role within a condominium without reading the user's document.\n*   Announcements have a `target` field and, for targeted announcements, a `unitResidentIds` list.  This denormalization allows security rules to efficiently determine if a user is authorized to view an announcement without traversing the unit hierarchy or user roles.\n\n**Structural Segregation (Homogeneous Security Posture):**\n\n*   Each collection contains documents with the same security requirements. For example, all documents in the `condominiums` collection have similar access control needs (primarily managed by administrators and staff).\n\n**Access Modeling:**\n\n*   **Path-Based Ownership:** Private data is stored under `/users/{userId}` (e.g., potentially user profile information, though minimal in this design).\n*   **Hierarchical Paths for User-Owned Data:** Data related to a user within a condominium context follows a hierarchical path (e.g., `/condominiums/{condominiumId}/units/{unitId}/incidents/{incidentId}`).\n*   **Membership Map:** Collaborative data access (e.g., within a condominium) is controlled using the `condominium_members/{userId}` subcollection which is effectively a membership map. This simplifies security rules for roles within a condominium.\n*   **Global Roles (DBAC):** Administrative privileges are managed via a dedicated collection, `/roles_admin/{uid}`, enabling simple existence checks in security rules.\n\n**QAPs (Rules are not Filters):**\n\n*   The structure enables secure `list` operations. For example, listing announcements for a specific condominium can be done securely because the `condominiumId` is a top-level field, and security rules can filter based on the user's membership in that condominium.\n*   The segregation of data into distinct collections based on access control requirements prevents the need for complex filtering within rules.\n\n**Invariants:**\n\n*   The structure supports the integrity of ownership, timestamps, and denormalized data. Security rules can enforce that `createdBy` fields match the authenticated user's ID and that `createdAt` timestamps are set upon document creation.\n\n**Data Clarity and Predictability:**\n\n*   Explicit State Modeling: The `Reservation` and `Incident` entities use a `status` field to explicitly represent the state of the entity.\n*   Predictable Schema:  The schema avoids dynamic keys. Arrays are used for lists of attachments and options.\n*   Radical Consistency: Naming conventions are used consistently. Authorization fields are always named consistently (e.g., `condominiumId`). Wildcards are descriptive (e.g., `{condominiumId}` instead of `{id}`)."
+  }
+}

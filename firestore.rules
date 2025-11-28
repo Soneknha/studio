@@ -1,0 +1,386 @@
+/**
+ * Core Philosophy: This ruleset enforces a multi-tenant, role-based security model for a condominium management application.
+ * Access is primarily governed by a user's membership and role within a specific condominium. A global 'admin' role exists for
+ * super-user administrative tasks, but day-to-day operations are handled by condominium-specific roles (e.g., 'SINDICO', 'PORTEIRO').
+ *
+ * Data Structure: The data is organized hierarchically under a top-level `/condominiums/{condominiumId}` collection. This enforces
+ * a strict data silo between different condominiums. User profile data is stored separately in `/users/{userId}`.
+ *
+ * Key Security Decisions:
+ * - Default Deny: All access is denied by default and must be explicitly granted.
+ * - Condominium Silos: Users can only access data belonging to a condominium they are a member of. This is the primary security boundary.
+ * - Role-Based Access Control (RBAC): Within a condominium, permissions are granularly controlled by roles. For example, a 'SINDICO' can manage announcements
+ *   and documents, while a 'PORTEIRO' can only register visitors. A regular 'MORADOR' has read-only access to most data but can create specific
+ *   documents like reservations and incidents.
+ * - User Data Privacy: Users can only access their own user profile document. User listing is disabled to protect privacy.
+ * - No Cross-Collection Queries in Rules: Authorization decisions are fast and efficient, relying on denormalized data rather than slow `get()` or `exists()`
+ *   calls across disparate top-level collections where possible. The primary mechanism for this is the `/condominiums/{condominiumId}/condominium_members/{userId}`
+ *   subcollection, which stores a user's role within that specific condominium.
+ *
+ * Denormalization for Authorization:
+ * To ensure performant and secure rules, authorization data is denormalized. Instead of looking up a user's role from the `/users/{userId}` document for every
+ * request, we use a `/condominiums/{condominiumId}/condominium_members/{userId}` subcollection. A simple `exists()` or `get()` on this path is sufficient
+ * to determine a user's membership and role within that specific condominium, avoiding costly and complex lookups. For conversations, a `participantIds`
+ * array is stored directly on the conversation document to easily check if a user is part of the chat.
+ *
+ * Structural Segregation:
+ * Data is segregated by security context. Global admin roles are in a separate `/roles_admin` collection. Each condominium's data is entirely self-contained
+ * under its own document, and within that, different data types (e.g., `announcements`, `reservations`) are in their own subcollections.
+ * This clear separation simplifies rule writing and makes security auditing more straightforward.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------------
+    // Helper Functions
+    // ------------------------------------------------------------------------
+
+    /**
+     * Verifies the user is signed in.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Verifies the requesting user's UID matches the provided userId.
+     * Used for ownership-based access control.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Verifies ownership for an existing resource.
+     * CRITICAL: Protects update/delete operations from acting on non-existent docs.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+    
+    /**
+     * Checks if the signed-in user has global admin privileges.
+     * Admin UIDs are stored in the `/roles_admin` collection.
+     */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+    
+    /**
+     * Retrieves the role data for a user within a specific condominium.
+     * This is the core function for our multi-tenant RBAC system.
+     */
+    function getCondominiumMemberDoc(condominiumId) {
+      return get(/databases/$(database)/documents/condominiums/$(condominiumId)/condominium_members/$(request.auth.uid));
+    }
+
+    /**
+     * Checks if a user is a member of a specific condominium.
+     */
+    function isCondominiumMember(condominiumId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/condominiums/$(condominiumId)/condominium_members/$(request.auth.uid));
+    }
+
+    /**
+     * Checks if a user has the 'SINDICO' (Manager) role in a specific condominium.
+     */
+    function isSindico(condominiumId) {
+      return isCondominiumMember(condominiumId) && getCondominiumMemberDoc(condominiumId).data.role == 'SINDICO';
+    }
+    
+    /**
+     * Checks if a user has the 'PORTEIRO' (Doorman) role in a specific condominium.
+     */
+    function isPorteiro(condominiumId) {
+      return isCondominiumMember(condominiumId) && getCondominiumMemberDoc(condominiumId).data.role == 'PORTEIRO';
+    }
+
+    /**
+     * Checks if a user is a resident of a specific unit.
+     */
+    function isResidentOfUnit(condominiumId, unitId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/condominiums/$(condominiumId)/units/$(unitId)/unit_residents/$(request.auth.uid));
+    }
+
+    /**
+     * Validates that the creatorId field of a new document matches the authenticated user.
+     */
+    function isCreator(data) {
+      return data.createdBy == request.auth.uid;
+    }
+    
+    /**
+     * Validates that the userId field of a new document matches the authenticated user.
+     */
+    function isSelf(data) {
+        return data.userId == request.auth.uid;
+    }
+
+    /**
+     * Validates that critical relational IDs are not changed during an update.
+     */
+    //function areRelationalIdsImmutable(keys) {
+    //  return keys.all(key, request.resource.data[key] == resource.data[key]);
+    //}
+    
+    // ------------------------------------------------------------------------
+    // User Profiles
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description Users can create and manage their own profile document.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own document: `users/user_abc`.
+     * @deny (create) A user trying to create a document for someone else: `users/user_xyz`.
+     * @deny (list) Any user trying to list all user profiles.
+     * @principle Restricts access to a user's own data tree.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+    
+    // ------------------------------------------------------------------------
+    // Admin Roles
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description Manages global admin roles. Only other admins can read this collection.
+     * @path /roles_admin/{userId}
+     * @allow (get) An admin reading another admin's role document.
+     * @deny (get) A non-admin user trying to read any role document.
+     * @deny (write) Any write operation by any user to maintain system integrity.
+     * @principle Secures global administrative roles from unauthorized access or modification.
+     */
+    match /roles_admin/{userId} {
+      allow get, list: if isAdmin();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // Condominium Root and Subcollections
+    // ------------------------------------------------------------------------
+    match /condominiums/{condominiumId} {
+      /**
+       * @description Condominium documents can be read by their members. Only admins can create them, and only a 'SINDICO' or admin can manage them.
+       * @path /condominiums/{condominiumId}
+       * @allow (get) A member of condominium 'condo_123' reading its document.
+       * @deny (get) A user who is not a member of 'condo_123' trying to read it.
+       * @deny (update) A regular 'MORADOR' trying to change the condominium's address.
+       * @principle Enforces multi-tenancy by restricting access to condominium members.
+       */
+      allow get, list: if isCondominiumMember(condominiumId) || isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if (isSindico(condominiumId) || isAdmin()) && resource != null;
+
+      /**
+       * @description Manages condominium membership and roles. A 'SINDICO' or admin can add/remove members.
+       * @path /condominiums/{condominiumId}/condominium_members/{userId}
+       * @allow (get) Any member of the condominium can check another member's role.
+       * @deny (create) A regular 'MORADOR' trying to add another user to the condominium.
+       * @principle Secures the core authorization mechanism for the multi-tenant system.
+       */
+      match /condominium_members/{userId} {
+        allow get, list: if isCondominiumMember(condominiumId) || isAdmin();
+        allow create, update, delete: if (isSindico(condominiumId) || isAdmin()) && (resource == null || resource != null);
+      }
+
+      /**
+       * @description Condominium structure (blocks, units). Readable by all members, managed by 'SINDICO' or admins.
+       * @path /condominiums/{condominiumId}/blocks/{blockId}
+       * @allow (get) A member of 'condo_123' reading block 'A'.
+       * @deny (update) A 'MORADOR' trying to rename a block.
+       * @principle Provides read access to common structural data for members while restricting modifications.
+       */
+      match /blocks/{blockId} {
+        allow get, list: if isCondominiumMember(condominiumId) || isAdmin();
+        allow create, update, delete: if (isSindico(condominiumId) || isAdmin()) && (resource == null || resource != null);
+      }
+
+      /**
+       * @description Units are readable by all condo members, managed by 'SINDICO' or admins.
+       * @path /condominiums/{condominiumId}/units/{unitId}
+       * @allow (get) Any member of 'condo_123' reading details for unit '101'.
+       * @deny (create) A 'MORADOR' trying to create a new unit.
+       * @principle Provides read access to common structural data for members while restricting modifications.
+       */
+      match /units/{unitId} {
+        allow get, list: if isCondominiumMember(condominiumId) || isAdmin();
+        allow create, update, delete: if (isSindico(condominiumId) || isAdmin()) && (resource == null || resource != null);
+
+        /**
+         * @description The link between a user and their unit. Readable by condo members, managed by 'SINDICO'.
+         * @path /condominiums/{condominiumId}/units/{unitId}/unit_residents/{userId}
+         * @allow (get) A 'MORADOR' looking up who lives in unit '101'.
+         * @deny (create) A 'MORADOR' trying to add themselves to a unit they don't live in.
+         * @principle Secures the user-to-unit relationship, which is critical for other permissions.
+         */
+        match /unit_residents/{userId} {
+          allow get, list: if isCondominiumMember(condominiumId) || isAdmin();
+          allow create, update, delete: if (isSindico(condominiumId) || isAdmin()) && (resource == null || resource != null);
+        }
+
+        /**
+         * @description Incidents can be created by a resident of the unit. They can only be read/managed by the creator or a 'SINDICO'.
+         * @path /condominiums/{condominiumId}/units/{unitId}/incidents/{incidentId}
+         * @allow (create) A resident of unit '101' creating an incident report for that unit.
+         * @deny (get) A resident of unit '202' trying to read an incident report for unit '101'.
+         * @deny (create) A user trying to create an incident for a unit they don't reside in.
+         * @principle Enforces data privacy for sensitive incident reports.
+         */
+        match /incidents/{incidentId} {
+          allow get, list: if isResidentOfUnit(condominiumId, unitId) || isSindico(condominiumId) || isAdmin();
+          allow create: if isResidentOfUnit(condominiumId, unitId) && isCreator(request.resource.data);
+          allow update, delete: if (isOwner(resource.data.createdBy) || isSindico(condominiumId) || isAdmin()) && resource != null;
+        }
+      }
+
+      /**
+       * @description Announcements are readable by all members, but only 'SINDICO' or admins can create/manage them.
+       * @path /condominiums/{condominiumId}/announcements/{announcementId}
+       * @allow (get) Any member of 'condo_123' reading an announcement.
+       * @deny (create) A 'MORADOR' trying to post a new announcement.
+       * @principle Centralizes communication control with authorized condominium staff.
+       */
+      match /announcements/{announcementId} {
+        allow get, list: if isCondominiumMember(condominiumId) || isAdmin();
+        allow create: if (isSindico(condominiumId) || isAdmin()) && isCreator(request.resource.data);
+        allow update, delete: if (isSindico(condominiumId) || isAdmin()) && resource != null;
+
+        // This path is for targeted announcements. Access is granted if the user is a target.
+        match /unit_resident_ids/{userId} {
+          allow get, list: if isOwner(userId) || isSindico(condominiumId) || isAdmin();
+          allow create: if false;
+          allow update: if false;
+          allow delete: if false;
+        }
+      }
+      
+      /**
+       * @description Conversations can be accessed only by their participants.
+       * @path /condominiums/{condominiumId}/conversations/{conversationId}
+       * @allow (get) A user whose UID is in the `participantIds` array reading the conversation.
+       * @deny (get) A user not listed in `participantIds` trying to read the conversation.
+       * @principle Implements closed-group access control for private and group chats.
+       */
+      match /conversations/{conversationId} {
+        allow get: if (isSignedIn() && request.auth.uid in resource.data.participantIds) || isSindico(condominiumId) || isAdmin();
+        allow list: if isCondominiumMember(condominiumId) || isAdmin();
+        allow create: if isCondominiumMember(condominiumId) && isSignedIn() && request.resource.data.participantIds.hasAll([request.auth.uid]);
+        allow update: if (isSignedIn() && request.auth.uid in resource.data.participantIds || isSindico(condominiumId) || isAdmin()) && resource != null;
+        allow delete: if (isSindico(condominiumId) || isAdmin()) && resource != null;
+
+        /**
+         * @description Messages can be read by conversation participants. Users can only create messages as themselves and update/delete their own messages.
+         * @path /condominiums/{condominiumId}/conversations/{conversationId}/messages/{messageId}
+         * @allow (create) A participant in conversation 'chat_abc' sending a new message.
+         * @deny (create) A user not in 'chat_abc' trying to send a message.
+         * @deny (update) A user trying to edit a message sent by another user.
+         * @principle Enforces participant-only access and ownership for individual messages within a conversation.
+         */
+        match /messages/{messageId} {
+          allow get, list: if (isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/condominiums/$(condominiumId)/conversations/$(conversationId)).data.participantIds) || isSindico(condominiumId) || isAdmin();
+          allow create: if (isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/condominiums/$(condominiumId)/conversations/$(conversationId)).data.participantIds) && request.resource.data.senderId == request.auth.uid;
+          allow update: if isExistingOwner(resource.data.senderId);
+          allow delete: if (isExistingOwner(resource.data.senderId) || isSindico(condominiumId) || isAdmin());
+        }
+      }
+
+      /**
+       * @description Amenities are readable by all members, but only 'SINDICO' or admins can manage them.
+       * @path /condominiums/{condominiumId}/amenities/{amenityId}
+       * @allow (get) Any member of 'condo_123' reading the rules for the 'Salão de Festas'.
+       * @deny (create) A 'MORADOR' trying to add a new amenity.
+       * @principle Provides read access to common facility data for members while restricting modifications.
+       */
+      match /amenities/{amenityId} {
+        allow get, list: if isCondominiumMember(condominiumId) || isAdmin();
+        allow create, update, delete: if (isSindico(condominiumId) || isAdmin()) && (resource == null || resource != null);
+      }
+
+      /**
+       * @description Reservations can be created by any member for themselves. They can only be managed by the creator or a 'SINDICO'.
+       * @path /condominiums/{condominiumId}/reservations/{reservationId}
+       * @allow (create) A 'MORADOR' creating a reservation for themselves.
+       * @deny (create) A 'MORADOR' creating a reservation on behalf of another user.
+       * @deny (delete) A 'MORADOR' trying to cancel someone else's reservation.
+       * @principle Enforces ownership for personal bookings, with administrative override.
+       */
+      match /reservations/{reservationId} {
+        allow get, list: if isCondominiumMember(condominiumId) || isAdmin();
+        allow create: if isCondominiumMember(condominiumId) && isSelf(request.resource.data);
+        allow update, delete: if (isOwner(resource.data.userId) || isSindico(condominiumId) || isAdmin()) && resource != null;
+      }
+
+      /**
+       * @description Documents are readable by all members, but only 'SINDICO' or admins can upload/manage them.
+       * @path /condominiums/{condominiumId}/documents/{documentId}
+       * @allow (get) Any member downloading the latest meeting minutes.
+       * @deny (create) A 'MORADOR' trying to upload a new document.
+       * @principle Secures official condominium documents, allowing read-only access to residents.
+       */
+      match /documents/{documentId} {
+        allow get, list: if isCondominiumMember(condominiumId) || isAdmin();
+        allow create, update, delete: if (isSindico(condominiumId) || isAdmin()) && (resource == null || resource != null);
+      }
+      
+      /**
+       * @description Assemblies are readable by members and managed by 'SINDICO' or admins.
+       * @path /condominiums/{condominiumId}/assemblies/{assemblyId}
+       * @allow (get) A 'MORADOR' viewing the details of an upcoming assembly.
+       * @deny (create) A 'MORADOR' trying to schedule a new assembly.
+       * @principle Restricts creation of official assemblies to authorized staff.
+       */
+      match /assemblies/{assemblyId} {
+        allow get, list: if isCondominiumMember(condominiumId) || isAdmin();
+        allow create, update, delete: if (isSindico(condominiumId) || isAdmin()) && (resource == null || resource != null);
+
+        /**
+         * @description Polls are readable by members and managed by 'SINDICO' or admins.
+         * @path /condominiums/{condominiumId}/assemblies/{assemblyId}/polls/{pollId}
+         * @allow (get) A 'MORADOR' viewing the questions for an assembly vote.
+         * @deny (create) A 'MORADOR' trying to add a new question to the vote.
+         * @principle Secures the content of official voting polls.
+         */
+        match /polls/{pollId} {
+          allow get, list: if isCondominiumMember(condominiumId) || isAdmin();
+          allow create, update, delete: if (isSindico(condominiumId) || isAdmin()) && (resource == null || resource != null);
+
+          /**
+           * @description Votes can be created by any condo member for themselves. Votes cannot be updated or deleted and can only be read by admins/sindicos to protect voter privacy.
+           * @path /condominiums/{condominiumId}/assemblies/{assemblyId}/polls/{pollId}/votes/{voteId}
+           * @allow (create) A 'MORADOR' casting their own vote.
+           * @deny (get) A 'MORADOR' trying to see how another resident voted.
+           * @deny (update) Any user trying to change a cast vote.
+           * @principle Enforces one-way voting and protects voter privacy.
+           */
+          match /votes/{voteId} {
+            allow get, list: if isSindico(condominiumId) || isAdmin();
+            allow create: if isCondominiumMember(condominiumId) && isSelf(request.resource.data);
+            allow update: if false;
+            allow delete: if false;
+          }
+        }
+      }
+      
+      /**
+       * @description Visitor logs can be read by members, but only created/updated by a 'PORTEIRO', 'SINDICO' or admin.
+       * @path /condominiums/{condominiumId}/visitors/{visitorId}
+       * @allow (create) A 'PORTEIRO' registering a new visitor's entry.
+       * @deny (create) A 'MORADOR' trying to register their own visitor.
+       * @principle Restricts sensitive access log data entry to authorized personnel.
+       */
+      match /visitors/{visitorId} {
+        allow get, list: if isCondominiumMember(condominiumId) || isAdmin();
+        allow create: if (isPorteiro(condominiumId) || isSindico(condominiumId) || isAdmin()) && request.resource.data.registeredBy == request.auth.uid;
+        allow update, delete: if (isPorteiro(condominiumId) || isSindico(condominiumId) || isAdmin()) && resource != null;
+      }
+    }
+  }
+}

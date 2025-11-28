@@ -64,7 +64,7 @@ export default function AdminUsersPage() {
         toast({
           variant: "destructive",
           title: "Erro ao buscar usuários",
-          description: "Não foi possível carregar a lista de usuários.",
+          description: "Não foi possível carregar la lista de usuários.",
         });
       } finally {
         setIsLoading(false);
@@ -101,9 +101,6 @@ export default function AdminUsersPage() {
           <h1 className="text-3xl font-bold font-headline">Gerenciar Usuários</h1>
           <p className="text-muted-foreground">Promova ou remova permissões de administrador.</p>
         </div>
-        <Button asChild>
-            <Link href="/seed-admin">Adicionar Admin Inicial</Link>
-        </Button>
       </div>
       <Card>
         <CardHeader>

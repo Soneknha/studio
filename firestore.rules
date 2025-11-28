@@ -14,6 +14,10 @@ service cloud.firestore {
       return request.auth.uid;
     }
 
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/roles_admin/$(userId()));
+    }
+
     /**
      * Checks if a user has a specific role in a condominium.
      * The document ID in usuarios_roles is a composite key: {userId}_{condominioId}
@@ -38,25 +42,29 @@ service cloud.firestore {
     // Collection Rules
     // ------------------------------------------------------------------------
 
-    // Users can read and update their own resident profile.
-    match /moradores/{moradorId} {
-      allow read, update: if isSignedIn() && moradorId == userId();
-      // Allow creation for any signed-in user, will be tied to their auth UID.
-      allow create: if isSignedIn() && request.resource.data.userId == userId();
-      allow delete: if false; // Generally, don't allow users to delete their own profiles.
+    // Users collection:
+    // - Admins can read/list all users.
+    // - Any signed-in user can read their own document.
+    match /users/{uid} {
+      allow get: if isSignedIn() && uid == userId();
+      allow list, write: if isAdmin();
+    }
+
+    // Admin roles can only be managed by other admins.
+    match /roles_admin/{uid} {
+      allow read, write: if isAdmin();
     }
     
     // User roles are managed only by admins or 'sindicos' of that specific condo.
     match /usuarios_roles/{roleId} {
         allow read: if isMember(resource.data.condominioId);
-        allow create, update, delete: if isSignedIn() && hasRole(request.resource.data.condominioId, "sindico");
+        allow create, update, delete: if isSignedIn() && (hasRole(request.resource.data.condominioId, "sindico") || isAdmin());
     }
 
     // Announcements - read for all members, write only for 'sindico'.
-    match /avisos/{avisoId} {
-      allow read: if isSignedIn() && isMember(resource.data.condominioId);
-      allow create, update, delete: if isSignedIn()
-        && hasRole(request.resource.data.condominioId, "sindico");
+    match /condominiums/{condominiumId}/announcements/{announcementId} {
+      allow get, list: if isMember(condominiumId);
+      allow create, update, delete: if hasRole(condominiumId, "sindico") || isAdmin();
     }
 
     // Reservations - resident creates/updates their own, 'sindico' can manage all.
@@ -64,27 +72,27 @@ service cloud.firestore {
       allow read: if isSignedIn() && isMember(resource.data.condominioId);
 
       allow create: if isSignedIn()
-        && request.resource.data.moradorId == userId()
-        && isMember(request.resource.data.condominioId);
+        && request.resource.data.residentId == userId()
+        && isMember(request.resource.data.condominiumId);
 
       allow update: if isSignedIn() && (
         // Resident can only edit their own pending reservations.
-        (resource.data.moradorId == userId() && resource.data.status == "pendente")
+        (resource.data.residentId == userId() && resource.data.status == "pendente")
         ||
         // 'Sindico' can change status or other details.
-        hasRole(resource.data.condominioId, "sindico")
+        hasRole(resource.data.condominioId, "sindico") || isAdmin()
       );
 
       // A resident can cancel their own reservation, a 'sindico' can cancel any.
-      allow delete: if isSignedIn() && (resource.data.moradorId == userId() || hasRole(resource.data.condominioId, "sindico"));
+      allow delete: if isSignedIn() && (resource.data.residentId == userId() || hasRole(resource.data.condominioId, "sindico") || isAdmin());
     }
 
     // Incidents - resident creates their own, 'sindico' reads/manages all.
      match /ocorrencias/{ocorrenciaId} {
-        allow read: if isSignedIn() && (resource.data.moradorId == userId() || hasRole(resource.data.condominioId, "sindico"));
-        allow list: if isSignedIn() && hasRole(request.query.condominioId, "sindico");
-        allow create: if isSignedIn() && request.resource.data.moradorId == userId();
-        allow update: if isSignedIn() && hasRole(resource.data.condominioId, "sindico");
+        allow read: if isSignedIn() && (resource.data.residentId == userId() || hasRole(resource.data.condominioId, "sindico") || isAdmin());
+        allow list: if isSignedIn() && (hasRole(request.query.condominioId, "sindico") || isAdmin());
+        allow create: if isSignedIn() && request.resource.data.residentId == userId();
+        allow update: if isSignedIn() && (hasRole(resource.data.condominioId, "sindico") || isAdmin());
         allow delete: if false;
     }
 
@@ -92,23 +100,23 @@ service cloud.firestore {
     match /portaria_registros/{registroId} {
       allow read, create: if isSignedIn()
         && (hasRole(request.resource.data.condominioId, "porteiro")
-            || hasRole(request.resource.data.condominioId, "sindico"));
+            || hasRole(request.resource.data.condominioId, "sindico") || isAdmin());
       allow update, delete: if false; // Records should be immutable.
     }
     
     // General condo data (condos, blocks, units) is readable by members and writable by 'sindico'.
     match /condominios/{condominioId} {
         allow read: if isMember(condominioId);
-        allow create, update, delete: if hasRole(condominioId, "sindico");
+        allow create, update, delete: if hasRole(condominioId, "sindico") || isAdmin();
         
         match /blocos/{blocoId} {
             allow read: if isMember(condominioId);
-            allow create, update, delete: if hasRole(condominioId, "sindico");
+            allow create, update, delete: if hasRole(condominioId, "sindico") || isAdmin();
         }
         
         match /unidades/{unidadeId} {
             allow read: if isMember(condominioId);
-            allow create, update, delete: if hasRole(condominioId, "sindico");
+            allow create, update, delete: if hasRole(condominioId, "sindico") || isAdmin();
         }
     }
   }

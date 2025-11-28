@@ -7,7 +7,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { generate } from 'genkit/ai';
+import { generate } from 'genkit';
 import { Part } from 'genkit/content';
 
 const systemPrompt = `Você é o "Síndico IA" de um condomínio chamado CondoConnect. Você é um assistente virtual amigável, prestativo e um pouco formal, projetado para ajudar os moradores com suas dúvidas e solicitações.

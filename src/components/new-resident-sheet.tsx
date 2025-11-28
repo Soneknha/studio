@@ -122,7 +122,7 @@ export function NewResidentSheet({
         `condominiums/${condominiumId}/condominium_members`,
         user.uid
       );
-      const condoMemberData = { role: 'MORADOR' };
+      const condoMemberData = { role: 'MORADOR', uid: user.uid };
       batch.set(condoMemberRef, condoMemberData);
       
       // Unit document (merges data in case unit already exists)
@@ -133,8 +133,6 @@ export function NewResidentSheet({
         blockId: values.unit.split('-')[0] || 'N/A',
         number: values.unit.split('-')[1] || values.unit,
        };
-       // Note: We avoid overwriting residentIds, this should be handled with arrayUnion in a real scenario
-       // For this prototype, we'll keep it simple and just ensure the unit doc exists.
       batch.set(unitRef, unitData, { merge: true });
 
       // Unit resident link document
@@ -174,17 +172,19 @@ export function NewResidentSheet({
 
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'Este e-mail já está em uso por outra conta.';
-      } else if (error.name !== 'FirebaseError') { // Don't show toast for our custom permission errors
+      } else if (error.name === 'FirebaseError') {
+        // This is our custom permission error, we don't need a toast for it
+        // as the developer overlay will show the detailed error.
+        return; 
+      } else {
         errorMessage = error.message || defaultMessage;
       }
       
-      if(error.name !== 'FirebaseError') {
-          toast({
-            variant: 'destructive',
-            title: 'Erro ao adicionar morador',
-            description: errorMessage,
-          });
-      }
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao adicionar morador',
+        description: errorMessage,
+      });
     }
   };
 

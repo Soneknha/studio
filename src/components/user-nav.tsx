@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Avatar,
   AvatarFallback,
@@ -13,29 +15,55 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { CreditCard, LogOut, Settings, User } from "lucide-react"
+import { CreditCard, LogOut, Settings, User as UserIcon } from "lucide-react"
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import Link from "next/link";
+import { useAuth, useUser } from "@/firebase";
+import { signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-1');
 
 export function UserNav() {
+  const auth = useAuth();
+  const { user } = useUser();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push('/login');
+    } catch (error) {
+      console.error("Error signing out: ", error);
+      // Optionally, show a toast notification on error
+    }
+  };
+  
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return '??';
+    const names = name.split(' ');
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-9 w-9 rounded-full">
           <Avatar className="h-9 w-9">
-            {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt="Avatar" data-ai-hint={userAvatar.imageHint} />}
-            <AvatarFallback>SR</AvatarFallback>
+            {user?.photoURL && <AvatarImage src={user.photoURL} alt="Avatar" />}
+            <AvatarFallback>{getInitials(user?.displayName)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">Síndico Responsável</p>
+            <p className="text-sm font-medium leading-none">{user?.displayName || "Usuário"}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              sindico@condominio.com
+              {user?.email || "Email não disponível"}
             </p>
           </div>
         </DropdownMenuLabel>
@@ -43,7 +71,7 @@ export function UserNav() {
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
             <Link href="/settings">
-              <User className="mr-2 h-4 w-4" />
+              <UserIcon className="mr-2 h-4 w-4" />
               <span>Perfil</span>
             </Link>
           </DropdownMenuItem>
@@ -59,7 +87,7 @@ export function UserNav() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem onSelect={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Sair</span>
         </DropdownMenuItem>

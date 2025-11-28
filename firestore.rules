@@ -85,14 +85,16 @@ service cloud.firestore {
      * Checks if a user has the 'SINDICO' (Manager) role in a specific condominium.
      */
     function isSindico(condominiumId) {
-      return isCondominiumMember(condominiumId) && getCondominiumMemberDoc(condominiumId).data.role == 'SINDICO';
+      let memberDoc = getCondominiumMemberDoc(condominiumId);
+      return memberDoc != null && memberDoc.data.role == 'SINDICO';
     }
     
     /**
      * Checks if a user has the 'PORTEIRO' (Doorman) role in a specific condominium.
      */
     function isPorteiro(condominiumId) {
-      return isCondominiumMember(condominiumId) && getCondominiumMemberDoc(condominiumId).data.role == 'PORTEIRO';
+      let memberDoc = getCondominiumMemberDoc(condominiumId);
+      return memberDoc != null && memberDoc.data.role == 'PORTEIRO';
     }
 
     /**
@@ -383,5 +385,7 @@ service cloud.firestore {
     }
   }
 }
+
+    
 
     

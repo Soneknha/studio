@@ -11,6 +11,7 @@ import {
   Settings,
   Building,
   UserCog,
+  Shield,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
@@ -41,6 +42,7 @@ const residentMenuItems = [
 const adminMenuItems = [
     { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/users", label: "Usuários", icon: UserCog },
+    { href: "/admin/roles", label: "Funções", icon: Shield },
 ];
 
 const settingsItem = { href: "/settings", label: "Configurações", icon: Settings };
@@ -51,8 +53,7 @@ export function SidebarNav() {
 
   const checkActive = (href: string) => {
     // Exact match for dashboards, startsWith for others.
-    const isDashboard = href.includes('dashboard');
-    if (isDashboard) return pathname === href;
+    if (href.endsWith('dashboard')) return pathname === href;
     return pathname.startsWith(href) && href !== '/';
   }
 

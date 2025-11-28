@@ -10,6 +10,7 @@ import {
   Users,
   Settings,
   Building,
+  UserCog,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
@@ -23,6 +24,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
+import { useUser } from "@/firebase"
 
 const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -34,14 +36,22 @@ const menuItems = [
   { href: "/residents", label: "Moradores", icon: Users },
 ];
 
+const adminMenuItems = [
+    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/admin/users", label: "Usuários", icon: UserCog },
+];
+
 const settingsItem = { href: "/settings", label: "Configurações", icon: Settings };
 
 export function SidebarNav() {
   const pathname = usePathname()
+  const { isAdmin } = useUser();
 
-  const isExactlyDashboard = pathname === '/dashboard';
+  const currentMenuItems = isAdmin ? adminMenuItems : menuItems;
+
+  const isExactlyDashboard = pathname === '/dashboard' || pathname === '/admin/dashboard';
   const checkActive = (href: string) => {
-    if (href === '/dashboard') return isExactlyDashboard;
+    if (href === '/dashboard' || href === '/admin/dashboard') return isExactlyDashboard;
     return pathname.startsWith(href) && href !== '/';
   }
 
@@ -57,7 +67,7 @@ export function SidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-2">
         <SidebarMenu>
-          {menuItems.map((item) => (
+          {currentMenuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   as={Link}

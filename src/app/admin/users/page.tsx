@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useFirestore } from '@/firebase';
-import { collection, doc, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
+import { useFirestore, useUser } from '@/firebase';
+import { collection, doc, getDocs, setDoc, writeBatch } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,9 +21,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import Link from 'next/link';
+import { UserPlus } from 'lucide-react';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
-interface User {
+interface AppUser {
   id: string;
   name?: string;
   email?: string;
@@ -32,8 +34,9 @@ interface User {
 
 export default function AdminUsersPage() {
   const firestore = useFirestore();
+  const { user: adminUser } = useUser();
   const { toast } = useToast();
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -64,7 +67,7 @@ export default function AdminUsersPage() {
         toast({
           variant: "destructive",
           title: "Erro ao buscar usuários",
-          description: "Não foi possível carregar la lista de usuários.",
+          description: "Não foi possível carregar a lista de usuários.",
         });
       } finally {
         setIsLoading(false);
@@ -74,7 +77,7 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, [firestore, toast]);
 
-  const toggleAdmin = (user: User) => {
+  const toggleAdmin = (user: AppUser) => {
     if (!firestore) return;
     const adminRoleRef = doc(firestore, 'roles_admin', user.id);
     if (user.isAdmin) {
@@ -94,6 +97,50 @@ export default function AdminUsersPage() {
     }
   };
 
+  const addSelfAsSindico = () => {
+    if (!firestore || !adminUser) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Usuário administrador ou Firestore não encontrado.' });
+        return;
+    }
+    const condominiumId = "condo-connect-123";
+    const roleId = `${adminUser.uid}_${condominiumId}`;
+
+    const batch = writeBatch(firestore);
+
+    // 1. Create/update user document
+    const userRef = doc(firestore, 'users', adminUser.uid);
+    batch.set(userRef, {
+        id: adminUser.uid,
+        name: adminUser.displayName || 'Admin User',
+        email: adminUser.email,
+    }, { merge: true });
+    
+    // 2. Create the role document
+    const roleRef = doc(firestore, 'usuarios_roles', roleId);
+    batch.set(roleRef, {
+        userId: adminUser.uid,
+        condominiumId: condominiumId,
+        role: "sindico",
+    });
+
+    batch.commit().then(() => {
+        toast({
+            title: "Sucesso!",
+            description: "Você foi adicionado como síndico do condomínio de teste.",
+        });
+    }).catch(error => {
+        const permissionError = new FirestorePermissionError({
+          path: `batch write for test sindico role`,
+          operation: 'write',
+          requestResourceData: { 
+            userDoc: { name: adminUser.displayName, email: adminUser.email },
+            roleDoc: { userId: adminUser.uid, role: 'sindico' }
+          }
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
   return (
     <div className="flex flex-col gap-8">
        <div className="flex justify-between items-center">
@@ -101,6 +148,10 @@ export default function AdminUsersPage() {
           <h1 className="text-3xl font-bold font-headline">Gerenciar Usuários</h1>
           <p className="text-muted-foreground">Promova ou remova permissões de administrador.</p>
         </div>
+        <Button onClick={addSelfAsSindico}>
+          <UserPlus className="mr-2 h-4 w-4" />
+          Adicionar-se como Síndico de Teste
+        </Button>
       </div>
       <Card>
         <CardHeader>

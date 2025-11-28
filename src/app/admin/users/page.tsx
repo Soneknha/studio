@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, doc, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import Link from 'next/link';
 
 interface User {
   id: string;
@@ -37,6 +38,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     const fetchUsers = async () => {
+      if (!firestore) return;
       setIsLoading(true);
       try {
         const usersCol = collection(firestore, 'users');
@@ -73,6 +75,7 @@ export default function AdminUsersPage() {
   }, [firestore, toast]);
 
   const toggleAdmin = (user: User) => {
+    if (!firestore) return;
     const adminRoleRef = doc(firestore, 'roles_admin', user.id);
     if (user.isAdmin) {
       deleteDocumentNonBlocking(adminRoleRef);
@@ -82,7 +85,7 @@ export default function AdminUsersPage() {
         description: `${user.name} não é mais um administrador.`,
       });
     } else {
-      setDocumentNonBlocking(adminRoleRef, { isAdmin: true }, {});
+      setDocumentNonBlocking(adminRoleRef, { uid: user.id }, {});
       setUsers(users.map(u => u.id === user.id ? { ...u, isAdmin: true } : u));
       toast({
         title: "Permissão concedida",
@@ -93,9 +96,14 @@ export default function AdminUsersPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-bold font-headline">Gerenciar Usuários</h1>
-        <p className="text-muted-foreground">Promova ou remova permissões de administrador.</p>
+       <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold font-headline">Gerenciar Usuários</h1>
+          <p className="text-muted-foreground">Promova ou remova permissões de administrador.</p>
+        </div>
+        <Button asChild>
+            <Link href="/seed-admin">Adicionar Admin Inicial</Link>
+        </Button>
       </div>
       <Card>
         <CardHeader>

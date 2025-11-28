@@ -10,6 +10,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -47,7 +48,6 @@ export default function SeedAdminPage() {
           id: ADMIN_UID,
           name: ADMIN_NAME,
           email: ADMIN_EMAIL,
-          roles: ['SINDICO', 'ADMIN'], // Example roles
         });
         setResult(prev => prev + `Documento de usuário para ${ADMIN_NAME} criado com sucesso.\n`);
       } else {
@@ -97,7 +97,7 @@ export default function SeedAdminPage() {
             <p><strong>UID:</strong> {ADMIN_UID}</p>
           </div>
           <Button onClick={seedAdminUser} disabled={isLoading} className="w-full">
-            {isLoading ? 'Configurando...' : 'Configurar Admin'}
+            {isLoading ? 'Configurando...' : 'Tornar Administrador'}
           </Button>
           {result && (
             <pre className="mt-4 w-full rounded-md bg-muted p-4 text-sm">
@@ -105,11 +105,11 @@ export default function SeedAdminPage() {
             </pre>
           )}
         </CardContent>
-         <CardContent>
+         <CardFooter>
             <Button variant="outline" className="w-full" asChild>
-                <Link href="/admin/users">Voltar</Link>
+                <Link href="/admin/users">Voltar para Gerenciar Usuários</Link>
             </Button>
-        </CardContent>
+        </CardFooter>
       </Card>
     </div>
   );

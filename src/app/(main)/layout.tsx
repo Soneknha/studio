@@ -9,7 +9,7 @@ import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MainLayout({ children }: { children: ReactNode }) {
-  const { user, isAdmin, isUserLoading } = useUser();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
 
   useEffect(() => {
@@ -17,16 +17,12 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
     if (!user) {
       router.push('/login');
-    } else if (isAdmin) {
-      // Redirect admin to their specific dashboard
-      router.push('/admin/dashboard');
     }
-    // If it's a regular user, they stay in this layout.
     
-  }, [user, isAdmin, isUserLoading, router]);
+  }, [user, isUserLoading, router]);
 
-  // Show loading skeleton while checking auth or if the user is an admin being redirected
-  if (isUserLoading || isAdmin) {
+  // Show loading skeleton while checking auth
+  if (isUserLoading) {
     return (
         <div className="flex h-screen w-screen items-center justify-center">
             <div className="flex flex-col items-center gap-4">
@@ -40,8 +36,8 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     );
   }
   
-  // Render main layout for regular users
-  if(user && !isAdmin){
+  // Render main layout for authenticated users
+  if(user){
     return (
       <>
         <Sidebar collapsible="icon">

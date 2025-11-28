@@ -54,7 +54,7 @@ export default function AdminDashboardPage() {
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-3xl font-bold font-headline">
-          Painel do Administrador
+          Dashboard do Administrador
         </h1>
         <p className="text-muted-foreground">
           Visão geral e gerenciamento do sistema.

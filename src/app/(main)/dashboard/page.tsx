@@ -19,7 +19,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-3xl font-bold font-headline">Bem-vindo(a) de volta!</h1>
+        <h1 className="text-3xl font-bold font-headline">Dashboard do Condomínio</h1>
         <p className="text-muted-foreground">Aqui está um resumo do seu condomínio.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

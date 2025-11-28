@@ -22,11 +22,13 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel
 } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { useUser } from "@/firebase"
 
-const menuItems = [
+const residentMenuItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/announcements", label: "Avisos", icon: Megaphone },
   { href: "/reservations", label: "Reservas", icon: CalendarCheck },
@@ -47,11 +49,10 @@ export function SidebarNav() {
   const pathname = usePathname()
   const { isAdmin } = useUser();
 
-  const currentMenuItems = isAdmin ? adminMenuItems : menuItems;
-
-  const isExactlyDashboard = pathname === '/dashboard' || pathname === '/admin/dashboard';
   const checkActive = (href: string) => {
-    if (href === '/dashboard' || href === '/admin/dashboard') return isExactlyDashboard;
+    // Exact match for dashboards, startsWith for others.
+    const isDashboard = href.includes('dashboard');
+    if (isDashboard) return pathname === href;
     return pathname.startsWith(href) && href !== '/';
   }
 
@@ -66,21 +67,46 @@ export function SidebarNav() {
         </Link>
       </SidebarHeader>
       <SidebarContent className="p-2">
-        <SidebarMenu>
-          {currentMenuItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  as={Link}
-                  href={item.href}
-                  isActive={checkActive(item.href)}
-                  tooltip={item.label}
-                >
-                  <item.icon />
-                  <span>{item.label}</span>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Admin</SidebarGroupLabel>
+            <SidebarMenu>
+              {adminMenuItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      as={Link}
+                      href={item.href}
+                      isActive={checkActive(item.href)}
+                      tooltip={item.label}
+                    >
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
+        
+        <SidebarGroup>
+            <SidebarGroupLabel>Condomínio</SidebarGroupLabel>
+            <SidebarMenu>
+            {residentMenuItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                    as={Link}
+                    href={item.href}
+                    isActive={checkActive(item.href)}
+                    tooltip={item.label}
+                    >
+                    <item.icon />
+                    <span>{item.label}</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            ))}
+            </SidebarMenu>
+        </SidebarGroup>
+
       </SidebarContent>
       <SidebarFooter className="p-2">
         <Separator className="my-1 bg-sidebar-border" />

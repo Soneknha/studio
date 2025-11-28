@@ -17,11 +17,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       if (!user) {
         router.push('/login');
       } else if (!isAdmin) {
+        // If a non-admin tries to access, send them to their dashboard.
         router.push('/dashboard');
       }
     }
   }, [user, isAdmin, isUserLoading, router]);
 
+  // Show a loading skeleton while we verify the user's role.
   if (isUserLoading || !user || !isAdmin) {
     return (
       <div className="flex h-screen w-screen items-center justify-center">
@@ -36,6 +38,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  // If the user is a verified admin, render the admin layout.
   return (
     <>
       <Sidebar collapsible="icon">

@@ -50,16 +50,16 @@ export default function SeedAdminPage() {
         email: ADMIN_EMAIL,
       };
       
-      const adminRoleData = { uid: ADMIN_UID, isAdmin: true, createdAt: new Date().toISOString() };
+      const adminRoleData = { uid: ADMIN_UID, isAdmin: true };
 
-      // 1. Check and create user document
+      // 1. Check user document
       const userDoc = await getDoc(userRef).catch(error => {
           const permissionError = new FirestorePermissionError({
             path: userRef.path,
             operation: 'get',
           });
           errorEmitter.emit('permission-error', permissionError);
-          throw error;
+          throw error; // Re-throw to stop execution
       });
 
       if (!userDoc.exists()) {
@@ -70,7 +70,7 @@ export default function SeedAdminPage() {
             requestResourceData: userData,
           });
           errorEmitter.emit('permission-error', permissionError);
-          throw error;
+          throw error; // Re-throw to stop execution
         });
         setResult(prev => prev + `Documento de usuário para ${ADMIN_NAME} criado.\n`);
       } else {
@@ -84,7 +84,7 @@ export default function SeedAdminPage() {
             operation: 'get',
           });
           errorEmitter.emit('permission-error', permissionError);
-          throw error;
+          throw error; // Re-throw to stop execution
       });
 
       if (!adminDoc.exists()) {
@@ -95,7 +95,7 @@ export default function SeedAdminPage() {
             requestResourceData: adminRoleData,
           });
           errorEmitter.emit('permission-error', permissionError);
-          throw error;
+          throw error; // Re-throw to stop execution
         });
         setResult(prev => prev + 'Permissão de administrador concedida.\n');
       } else {
@@ -107,6 +107,7 @@ export default function SeedAdminPage() {
         description: 'O usuário administrador foi configurado com sucesso.',
       });
     } catch (error: any) {
+       // Only show toast for unexpected errors, not for permission errors handled by the listener
        if (error.name !== 'FirebaseError') {
          setResult(`Ocorreu um erro inesperado: ${error.message}`);
          toast({

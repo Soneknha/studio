@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useFirestore } from '@/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -50,17 +50,16 @@ export default function SeedAdminPage() {
         email: ADMIN_EMAIL,
       };
       
-      const adminRoleData = { uid: ADMIN_UID };
+      const adminRoleData = { uid: ADMIN_UID, isAdmin: true, createdAt: new Date().toISOString() };
 
       // 1. Check and create user document
       const userDoc = await getDoc(userRef).catch(error => {
-          // This read might fail, let's create a contextual error for it
           const permissionError = new FirestorePermissionError({
             path: userRef.path,
             operation: 'get',
           });
           errorEmitter.emit('permission-error', permissionError);
-          throw error; // Re-throw to stop execution
+          throw error;
       });
 
       if (!userDoc.exists()) {
@@ -71,9 +70,9 @@ export default function SeedAdminPage() {
             requestResourceData: userData,
           });
           errorEmitter.emit('permission-error', permissionError);
-          throw error; // Re-throw
+          throw error;
         });
-        setResult(prev => prev + `Documento de usuário para ${ADMIN_NAME} criado com sucesso.\n`);
+        setResult(prev => prev + `Documento de usuário para ${ADMIN_NAME} criado.\n`);
       } else {
         setResult(prev => prev + `Documento de usuário para ${ADMIN_NAME} já existe.\n`);
       }
@@ -98,20 +97,17 @@ export default function SeedAdminPage() {
           errorEmitter.emit('permission-error', permissionError);
           throw error;
         });
-        setResult(prev => prev + 'Permissão de administrador concedida com sucesso.\n');
+        setResult(prev => prev + 'Permissão de administrador concedida.\n');
       } else {
         setResult(prev => prev + 'Usuário já possui permissão de administrador.\n');
       }
 
       toast({
         title: 'Operação Concluída',
-        description: 'O usuário administrador foi configurado.',
+        description: 'O usuário administrador foi configurado com sucesso.',
       });
     } catch (error: any) {
-       // This catch block now primarily handles flow control and avoids duplicate toasts.
-       // The actual error is emitted to the global listener.
        if (error.name !== 'FirebaseError') {
-         // Handle non-permission errors if necessary
          setResult(`Ocorreu um erro inesperado: ${error.message}`);
          toast({
            variant: 'destructive',

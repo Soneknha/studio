@@ -18,6 +18,7 @@ import { Building, ShieldCheck, Users } from 'lucide-react';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Condominium {
   id: string;
@@ -25,13 +26,20 @@ interface Condominium {
   address: string;
 }
 
+// Mock data until we have a form to create condominiums
+const mockCondominiums: Condominium[] = [
+    {
+        id: 'condo-connect-123',
+        name: 'CondoConnect Towers',
+        address: 'Rua dos Desenvolvedores, 123 - São Paulo, SP'
+    }
+];
+
+
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
 
-  const condominiumsQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'condominios') : null),
-    [firestore]
-  );
+  // We keep the real queries for users and admins
   const usersQuery = useMemoFirebase(
     () => (firestore ? collection(firestore, 'users') : null),
     [firestore]
@@ -41,7 +49,10 @@ export default function AdminDashboardPage() {
     [firestore]
   );
 
-  const { data: condominiums, isLoading: isLoadingCondos } = useCollection<Condominium>(condominiumsQuery);
+  // For now, let's use the mock data for condominiums
+  const condominiums = mockCondominiums;
+  const isLoadingCondos = false; // We are not loading from the DB for now
+
   const { data: users, isLoading: isLoadingUsers } = useCollection(usersQuery);
   const { data: admins, isLoading: isLoadingAdmins } = useCollection(adminsQuery);
 
@@ -69,7 +80,7 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoadingCondos ? '...' : totalCondos}
+              {isLoadingCondos ? <Skeleton className="h-8 w-10" /> : totalCondos}
             </div>
             <p className="text-xs text-muted-foreground">gerenciados</p>
           </CardContent>
@@ -83,7 +94,7 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoadingUsers ? '...' : totalUsers}
+              {isLoadingUsers ? <Skeleton className="h-8 w-10" /> : totalUsers}
             </div>
             <p className="text-xs text-muted-foreground">
               em todos os condomínios
@@ -99,7 +110,7 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoadingAdmins ? '...' : totalAdmins}
+              {isLoadingAdmins ? <Skeleton className="h-8 w-10" /> : totalAdmins}
             </div>
             <p className="text-xs text-muted-foreground">com acesso total</p>
           </CardContent>
@@ -125,9 +136,9 @@ export default function AdminDashboardPage() {
             <TableBody>
               {isLoadingCondos && (
                 <TableRow>
-                  <TableCell colSpan={3} className="h-24 text-center">
-                    Carregando condomínios...
-                  </TableCell>
+                   <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                   <TableCell><Skeleton className="h-5 w-64" /></TableCell>
+                   <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                 </TableRow>
               )}
               {!isLoadingCondos && condominiums && condominiums.length === 0 && (
